@@ -24,6 +24,7 @@ RUN apt-get update && \
         ninja-build \
         && \
     rm -rf /var/lib/apt/lists/* && \
+    rm -f /usr/bin/python /usr/bin/python3 && \
     ln -s /usr/bin/python3.10 /usr/bin/python && \
     ln -s /usr/bin/python3.10 /usr/bin/python3 && \
     git lfs install
