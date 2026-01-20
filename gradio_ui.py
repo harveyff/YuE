@@ -134,12 +134,8 @@ def create_ui():
     """Create the Gradio UI interface"""
     
     # Note: theme parameter moved to launch() in Gradio 6.0+
-    # Enable language switcher in settings by ensuring proper configuration
-    with gr.Blocks(
-        title="YuE Music Generation",
-        # Ensure language switcher is enabled in settings
-        show_api=False  # Hide API docs in UI, but keep settings accessible
-    ) as demo:
+    # show_api parameter is not available in gr.Blocks() constructor
+    with gr.Blocks(title="YuE Music Generation") as demo:
         gr.Markdown("""
         # 🎵 YuE Music Generation UI
         **Open Music Foundation Models for Full-Song Generation**

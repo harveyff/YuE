@@ -197,9 +197,7 @@ if GRADIO_AVAILABLE:
             app, 
             gradio_ui, 
             path="/ui", 
-            root_path="/ui",
-            # Ensure settings panel is accessible for language switching
-            show_api=False
+            root_path="/ui"
         )
         print("✓ Gradio UI mounted at /ui (root_path=/ui)")
         print("✓ Language switcher should be available in Settings panel")
