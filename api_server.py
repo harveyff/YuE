@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 YuE API Server - FastAPI wrapper for YuE inference
-This script provides a REST API interface for YuE music generation.
+This script provides a REST API interface and Gradio WebUI for YuE music generation.
 """
 
 import os
@@ -12,9 +12,18 @@ import shutil
 from pathlib import Path
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 import uvicorn
+
+# Try to import gradio for UI
+try:
+    import gradio as gr
+    from gradio_ui import create_ui
+    GRADIO_AVAILABLE = True
+except ImportError:
+    GRADIO_AVAILABLE = False
+    print("Warning: Gradio not available. Install with: pip install gradio")
 
 app = FastAPI(title="YuE Music Generation API", version="1.0.0")
 
@@ -47,9 +56,9 @@ async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "service": "yue-api"}
 
-@app.get("/")
-async def root():
-    """Root endpoint"""
+@app.get("/api")
+async def api_info():
+    """API info endpoint"""
     return {
         "service": "YuE Music Generation API",
         "version": "1.0.0",
@@ -57,7 +66,8 @@ async def root():
             "health": "/health",
             "generate": "/api/generate",
             "docs": "/docs"
-        }
+        },
+        "ui": "/" if GRADIO_AVAILABLE else "Not available (install gradio)"
     }
 
 @app.post("/api/generate")
@@ -139,8 +149,29 @@ async def get_output(filename: str):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(file_path)
 
+# Mount Gradio UI if available
+if GRADIO_AVAILABLE:
+    try:
+        gradio_ui = create_ui()
+        # Mount to root path "/" as default UI
+        app = gr.mount_gradio_app(app, gradio_ui, path="/")
+        print("✓ Gradio UI mounted at / (root)")
+    except Exception as e:
+        print(f"Warning: Failed to mount Gradio UI: {e}")
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     host = os.getenv("HOST", "0.0.0.0")
+    
+    if GRADIO_AVAILABLE:
+        print(f"🚀 Starting YuE API Server with Gradio UI")
+        print(f"   UI:  http://{host}:{port}/")
+        print(f"   API: http://{host}:{port}/api/generate")
+        print(f"   Docs: http://{host}:{port}/docs")
+    else:
+        print(f"🚀 Starting YuE API Server (Gradio UI not available)")
+        print(f"   API: http://{host}:{port}")
+        print(f"   Docs: http://{host}:{port}/docs")
+    
     uvicorn.run(app, host=host, port=port)
 

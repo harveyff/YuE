@@ -52,9 +52,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     (echo "Nightly builds failed, falling back to stable CUDA 12.1 (may not support sm_120)" && \
      pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121)
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir fastapi uvicorn
+# Install Python dependencies (requirements.txt already includes fastapi, uvicorn, gradio)
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Install FlashAttention (required for YuE)
 # Note: This may take a while and requires CUDA toolkit
@@ -68,11 +67,15 @@ RUN TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;8.9;9.0;12.0" \
 # Copy project code
 COPY . .
 
-# Copy API server script if it exists
+# Copy API server and Gradio UI scripts
 COPY api_server.py /app/api_server.py
+COPY gradio_ui.py /app/gradio_ui.py
 
 # Copy verification script
 COPY verify_sm120.py /app/verify_sm120.py
+
+# Copy top tags file for Gradio UI
+COPY top_200_tags.json /app/top_200_tags.json
 
 # Download xcodec_mini_infer if not present (required for inference)
 # This uses git-lfs to download large model files
@@ -87,7 +90,7 @@ RUN cd /app/inference && \
 
 # Create necessary directories
 RUN mkdir -p /app/output /app/.cache/huggingface /app/prompt_egs && \
-    chmod +x /app/api_server.py /app/verify_sm120.py
+    chmod +x /app/api_server.py /app/gradio_ui.py /app/verify_sm120.py
 
 # Set up HuggingFace cache directory
 ENV HF_HOME=/app/.cache/huggingface
