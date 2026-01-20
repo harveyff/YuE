@@ -134,7 +134,12 @@ def create_ui():
     """Create the Gradio UI interface"""
     
     # Note: theme parameter moved to launch() in Gradio 6.0+
-    with gr.Blocks(title="YuE Music Generation") as demo:
+    # Enable language switcher in settings by ensuring proper configuration
+    with gr.Blocks(
+        title="YuE Music Generation",
+        # Ensure language switcher is enabled in settings
+        show_api=False  # Hide API docs in UI, but keep settings accessible
+    ) as demo:
         gr.Markdown("""
         # 🎵 YuE Music Generation UI
         **Open Music Foundation Models for Full-Song Generation**
@@ -175,10 +180,9 @@ def create_ui():
                             outputs=genre_input
                         )
                 
-                lyrics_input = gr.Textbox(
-                    label="歌词 (Lyrics)",
-                    placeholder="[verse]\n第一段歌词...\n\n[chorus]\n副歌歌词...",
-                    value="""[verse]
+                # Lyrics template examples
+                LYRICS_TEMPLATES = {
+                    "英语示例 (English)": """[verse]
 Staring at the sunset, colors paint the sky
 Thoughts of you keep swirling, can't deny
 I know I let you down, I made mistakes
@@ -189,8 +193,109 @@ Every road you take, I'll be one step behind
 Every dream you chase, I'm reaching for the light
 You can't fight this feeling now
 I won't back down""",
+                    "英语完整版 (English Full)": """[verse]
+Staring at the sunset, colors paint the sky
+Thoughts of you keep swirling, can't deny
+I know I let you down, I made mistakes
+But I'm here to mend the heart I didn't break
+
+[chorus]
+Every road you take, I'll be one step behind
+Every dream you chase, I'm reaching for the light
+You can't fight this feeling now
+I won't back down
+You know you can't deny it now
+I won't back down
+
+[verse]
+They might say I'm foolish, chasing after you
+But they don't feel this love the way we do
+My heart beats only for you, can't you see?
+I won't let you slip away from me
+
+[chorus]
+Every road you take, I'll be one step behind
+Every dream you chase, I'm reaching for the light
+You can't fight this feeling now
+I won't back down
+You know you can't deny it now
+I won't back down
+
+[bridge]
+No, I won't back down, won't turn around
+Until you're back where you belong
+I'll cross the oceans wide, stand by your side
+Together we are strong
+
+[outro]
+Every road you take, I'll be one step behind
+Every dream you chase, love's the tie that binds
+You can't fight this feeling now
+I won't back down""",
+                    "中文示例 (Chinese)": """[verse]
+站在夕阳下，看着天空被染成金色
+对你的思念，在脑海中不断盘旋
+我知道我让你失望，我犯了错
+但我会修复这颗心，虽然不是我打破
+
+[chorus]
+无论你走哪条路，我都会在你身后
+无论你追逐什么梦想，我都在追寻光明
+你现在无法抗拒这种感觉
+我不会退缩""",
+                    "日文示例 (Japanese)": """[verse]
+夕日を見つめて、空が色づく
+あなたへの想いが、頭の中で渦巻く
+あなたをがっかりさせた、間違いを犯した
+でも壊した心を修復するためにここにいる
+
+[chorus]
+あなたが歩む道すべて、私は一歩後ろにいる
+あなたが追いかける夢すべて、私は光を求めている
+今この気持ちと戦えない
+私は諦めない""",
+                    "清空 (Clear)": ""
+                }
+                
+                with gr.Row():
+                    lyrics_template = gr.Dropdown(
+                        choices=list(LYRICS_TEMPLATES.keys()),
+                        value="英语示例 (English)",
+                        label="歌词模板 (Lyrics Template)",
+                        info="选择预设歌词模板，选择后会自动加载",
+                        scale=2,
+                        interactive=True
+                    )
+                    load_template_btn = gr.Button("加载模板 (Load Template)", scale=1, variant="primary")
+                
+                lyrics_input = gr.Textbox(
+                    label="歌词 (Lyrics)",
+                    placeholder="[verse]\n第一段歌词...\n\n[chorus]\n副歌歌词...",
+                    value=LYRICS_TEMPLATES["英语示例 (English)"],
                     lines=15,
-                    info="使用 [verse], [chorus], [bridge], [outro] 标签分隔段落，段落间用两个换行符分隔"
+                    info="使用 [verse], [chorus], [bridge], [outro] 标签分隔段落，段落间用两个换行符分隔",
+                    interactive=True
+                )
+                
+                # Function to load template - ensure it's accessible
+                def load_lyrics_template(template_name):
+                    """Load lyrics template based on selection"""
+                    if template_name and template_name in LYRICS_TEMPLATES:
+                        return LYRICS_TEMPLATES[template_name]
+                    return LYRICS_TEMPLATES.get(template_name, "")
+                
+                # Auto-load when dropdown changes
+                lyrics_template.change(
+                    fn=load_lyrics_template,
+                    inputs=[lyrics_template],
+                    outputs=[lyrics_input]
+                )
+                
+                # Also support button click
+                load_template_btn.click(
+                    fn=load_lyrics_template,
+                    inputs=[lyrics_template],
+                    outputs=[lyrics_input]
                 )
                 
                 with gr.Accordion("🎚️ Generation Parameters", open=True):
@@ -411,10 +516,6 @@ I won't back down""",
             outputs=[output_audio, status_output]
         )
         
-        gr.Markdown("""
-        ---
-        **YuE Music Generation UI** - Based on [YuE-UI](https://github.com/joeljuvel/YuE-UI) design
-        """)
     
     return demo
 

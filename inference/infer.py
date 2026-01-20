@@ -80,7 +80,22 @@ def seed_everything(seed=42):
 seed_everything(args.seed)
 # load tokenizer and model
 device = torch.device(f"cuda:{cuda_idx}" if torch.cuda.is_available() else "cpu")
-mmtokenizer = _MMSentencePieceTokenizer("./mm_tokenizer_v0.2_hf/tokenizer.model")
+# Use absolute path based on script location to avoid working directory issues
+_inference_dir = os.path.dirname(os.path.abspath(__file__))
+_tokenizer_path = os.path.join(_inference_dir, "mm_tokenizer_v0.2_hf", "tokenizer.model")
+mmtokenizer = _MMSentencePieceTokenizer(_tokenizer_path)
+
+# Fix relative paths for xcodec configs if they are relative paths
+if args.basic_model_config and not os.path.isabs(args.basic_model_config):
+    args.basic_model_config = os.path.join(_inference_dir, args.basic_model_config.lstrip('./'))
+if args.resume_path and not os.path.isabs(args.resume_path):
+    args.resume_path = os.path.join(_inference_dir, args.resume_path.lstrip('./'))
+if args.config_path and not os.path.isabs(args.config_path):
+    args.config_path = os.path.join(_inference_dir, args.config_path.lstrip('./'))
+if args.vocal_decoder_path and not os.path.isabs(args.vocal_decoder_path):
+    args.vocal_decoder_path = os.path.join(_inference_dir, args.vocal_decoder_path.lstrip('./'))
+if args.inst_decoder_path and not os.path.isabs(args.inst_decoder_path):
+    args.inst_decoder_path = os.path.join(_inference_dir, args.inst_decoder_path.lstrip('./'))
 model = AutoModelForCausalLM.from_pretrained(
     stage1_model, 
     torch_dtype=torch.bfloat16,

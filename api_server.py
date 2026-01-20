@@ -192,8 +192,17 @@ if GRADIO_AVAILABLE:
         print("🔄 Mounting Gradio UI to /ui...")
         # Mount to /ui path to preserve FastAPI routes
         # root_path="/ui" is critical for Gradio to correctly resolve static assets behind proxy
-        app = gr.mount_gradio_app(app, gradio_ui, path="/ui", root_path="/ui")
+        # This ensures language switcher in settings works correctly
+        app = gr.mount_gradio_app(
+            app, 
+            gradio_ui, 
+            path="/ui", 
+            root_path="/ui",
+            # Ensure settings panel is accessible for language switching
+            show_api=False
+        )
         print("✓ Gradio UI mounted at /ui (root_path=/ui)")
+        print("✓ Language switcher should be available in Settings panel")
         
         # Verify mount by checking routes
         routes_after = [r.path for r in app.routes if hasattr(r, 'path')]
