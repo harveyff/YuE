@@ -94,10 +94,10 @@ RUN cd /app/inference && \
 RUN mkdir -p /app/output /app/.cache/huggingface /app/prompt_egs && \
     chmod +x /app/api_server.py /app/gradio_ui.py /app/verify_sm120.py
 
-# Copy check scripts
-COPY check_version.sh /app/check_version.sh
-COPY check_gradio.sh /app/check_gradio.sh
-RUN chmod +x /app/check_version.sh /app/check_gradio.sh
+# Set execute permissions for check scripts (already copied by COPY . . above)
+# Use conditional chmod to handle cases where files might not exist
+RUN chmod +x /app/check_version.sh /app/check_gradio.sh 2>/dev/null || \
+    echo "Warning: Some check scripts may not be present"
 
 # Set up HuggingFace cache directory
 ENV HF_HOME=/app/.cache/huggingface

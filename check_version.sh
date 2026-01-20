@@ -99,3 +99,4 @@ else
     echo "✗ This appears to be the OLD version without Gradio UI"
 fi
 
+
