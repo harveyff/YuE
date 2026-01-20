@@ -68,11 +68,13 @@ RUN TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;8.9;9.0;12.0" \
 COPY . .
 
 # Copy API server and Gradio UI scripts
+# Note: COPY . . above should include all files, but we copy explicitly to ensure they're present
 COPY api_server.py /app/api_server.py
-COPY gradio_ui.py /app/gradio_ui.py
-
-# Copy verification script
 COPY verify_sm120.py /app/verify_sm120.py
+
+# Copy Gradio UI file (required for new version)
+# This will fail the build if file doesn't exist, ensuring we catch missing files early
+COPY gradio_ui.py /app/gradio_ui.py
 
 # Copy top tags file for Gradio UI
 COPY top_200_tags.json /app/top_200_tags.json

@@ -84,7 +84,8 @@ If you're new to **machine learning** or the **command line**, we highly recomme
 To use a **GUI/Gradio** interface, check out:  
 - [YuE-exllamav2-UI](https://github.com/WrongProtocol/YuE-exllamav2-UI)
 - [YuEGP](https://github.com/deepbeepmeep/YuEGP)
-- [YuE-Interface](https://github.com/alisson-anjos/YuE-Interface)  
+- [YuE-Interface](https://github.com/alisson-anjos/YuE-Interface)
+- **Built-in Gradio UI**: This repository includes `api_server.py` with a built-in Gradio WebUI. Run `python api_server.py` to start the server, then access the UI at `http://localhost:8000/ui`  
 
 ### 1. Install environment and dependencies
 Make sure properly install flash attention 2 to reduce VRAM usage. 
@@ -116,6 +117,29 @@ git clone https://huggingface.co/m-a-p/xcodec_mini_infer
 ```
 
 ### 3. Run the inference
+
+#### Option A: Use Built-in API Server with Gradio UI (Recommended)
+
+The repository includes a FastAPI server with Gradio WebUI for easy music generation:
+
+```bash
+# Start the API server with Gradio UI
+python api_server.py
+
+# The server will start on http://localhost:8000
+# - Gradio UI: http://localhost:8000/ui
+# - API Docs: http://localhost:8000/docs
+# - Health Check: http://localhost:8000/health
+```
+
+You can also use Docker:
+```bash
+docker build -t yue:latest -f Dockerfile .
+docker run -p 8000:8000 --gpus all yue:latest
+```
+
+#### Option B: Use Command Line Inference
+
 Now generate music with **YuE** using 🤗 Transformers. Make sure your step [1](#1-install-environment-and-dependencies) and [2](#2-download-the-infer-code-and-tokenizer) are properly set up. 
 
 Note:
@@ -126,7 +150,6 @@ Note:
 - You can increase `--stage2_batch_size` to speed up the inference, but be careful for OOM.
 
 - LM ckpts will be automatically downloaded from huggingface. 
-
 
 ```bash
 # This is the CoT mode.

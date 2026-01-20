@@ -53,13 +53,13 @@ class InferenceRequest(BaseModel):
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "service": "yue-api"}
+    """Health check endpoint - must be accessible for k8s health checks"""
+    return JSONResponse(content={"status": "healthy", "service": "yue-api"})
 
 @app.get("/api")
 async def api_info():
     """API info endpoint"""
-    return {
+    return JSONResponse(content={
         "service": "YuE Music Generation API",
         "version": "1.0.0",
         "endpoints": {
@@ -67,8 +67,30 @@ async def api_info():
             "generate": "/api/generate",
             "docs": "/docs"
         },
-        "ui": "/" if GRADIO_AVAILABLE else "Not available (install gradio)"
-    }
+        "ui": "/ui" if GRADIO_AVAILABLE else "Not available (install gradio)"
+    })
+
+@app.get("/api/info")
+async def api_info_detail():
+    """API info endpoint (alias for /api) - used by nginx proxy"""
+    return await api_info()
+
+@app.get("/")
+async def root():
+    """Root endpoint - redirects to Gradio UI if available"""
+    if GRADIO_AVAILABLE:
+        return RedirectResponse(url="/ui")
+    else:
+        return JSONResponse(content={
+            "service": "YuE Music Generation API",
+            "version": "1.0.0",
+            "endpoints": {
+                "health": "/health",
+                "generate": "/api/generate",
+                "docs": "/docs"
+            },
+            "note": "Gradio UI not available. Install gradio to enable web interface."
+        })
 
 @app.post("/api/generate")
 async def generate_music(request: InferenceRequest, background_tasks: BackgroundTasks):
@@ -150,14 +172,18 @@ async def get_output(filename: str):
     return FileResponse(file_path)
 
 # Mount Gradio UI if available
+# Mount to /ui to avoid conflicts with FastAPI routes like /health and /api/*
 if GRADIO_AVAILABLE:
     try:
         gradio_ui = create_ui()
-        # Mount to root path "/" as default UI
-        app = gr.mount_gradio_app(app, gradio_ui, path="/")
-        print("✓ Gradio UI mounted at / (root)")
+        # Mount to /ui path to preserve FastAPI routes
+        app = gr.mount_gradio_app(app, gradio_ui, path="/ui")
+        print("✓ Gradio UI mounted at /ui")
+        print("✓ FastAPI routes (/health, /api/*) are preserved")
     except Exception as e:
         print(f"Warning: Failed to mount Gradio UI: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
@@ -165,7 +191,9 @@ if __name__ == "__main__":
     
     if GRADIO_AVAILABLE:
         print(f"🚀 Starting YuE API Server with Gradio UI")
-        print(f"   UI:  http://{host}:{port}/")
+        print(f"   UI:  http://{host}:{port}/ui")
+        print(f"   Root: http://{host}:{port}/ (redirects to /ui)")
+        print(f"   Health: http://{host}:{port}/health")
         print(f"   API: http://{host}:{port}/api/generate")
         print(f"   Docs: http://{host}:{port}/docs")
     else:
