@@ -94,6 +94,11 @@ RUN cd /app/inference && \
 RUN mkdir -p /app/output /app/.cache/huggingface /app/prompt_egs && \
     chmod +x /app/api_server.py /app/gradio_ui.py /app/verify_sm120.py
 
+# Copy check scripts
+COPY check_version.sh /app/check_version.sh
+COPY check_gradio.sh /app/check_gradio.sh
+RUN chmod +x /app/check_version.sh /app/check_gradio.sh
+
 # Set up HuggingFace cache directory
 ENV HF_HOME=/app/.cache/huggingface
 ENV TRANSFORMERS_CACHE=/app/.cache/huggingface

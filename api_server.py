@@ -19,11 +19,19 @@ import uvicorn
 # Try to import gradio for UI
 try:
     import gradio as gr
+    print(f"✓ Gradio imported successfully (version: {gr.__version__})")
     from gradio_ui import create_ui
+    print("✓ gradio_ui module imported successfully")
     GRADIO_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     GRADIO_AVAILABLE = False
-    print("Warning: Gradio not available. Install with: pip install gradio")
+    print(f"⚠️  Warning: Gradio not available: {e}")
+    print("   Install with: pip install gradio")
+except Exception as e:
+    GRADIO_AVAILABLE = False
+    print(f"⚠️  Warning: Error importing Gradio: {e}")
+    import traceback
+    traceback.print_exc()
 
 app = FastAPI(title="YuE Music Generation API", version="1.0.0")
 
@@ -79,7 +87,8 @@ async def api_info_detail():
 async def root():
     """Root endpoint - redirects to Gradio UI if available"""
     if GRADIO_AVAILABLE:
-        return RedirectResponse(url="/ui")
+        # Use 302 redirect to ensure browser follows redirect
+        return RedirectResponse(url="/ui", status_code=302)
     else:
         return JSONResponse(content={
             "service": "YuE Music Generation API",
@@ -173,17 +182,34 @@ async def get_output(filename: str):
 
 # Mount Gradio UI if available
 # Mount to /ui to avoid conflicts with FastAPI routes like /health and /api/*
+print(f"DEBUG: GRADIO_AVAILABLE = {GRADIO_AVAILABLE}")
 if GRADIO_AVAILABLE:
     try:
+        print("🔄 Creating Gradio UI...")
         gradio_ui = create_ui()
+        print(f"✓ Gradio UI created successfully: {type(gradio_ui)}")
+        
+        print("🔄 Mounting Gradio UI to /ui...")
         # Mount to /ui path to preserve FastAPI routes
-        app = gr.mount_gradio_app(app, gradio_ui, path="/ui")
-        print("✓ Gradio UI mounted at /ui")
+        # root_path="/ui" is critical for Gradio to correctly resolve static assets behind proxy
+        app = gr.mount_gradio_app(app, gradio_ui, path="/ui", root_path="/ui")
+        print("✓ Gradio UI mounted at /ui (root_path=/ui)")
+        
+        # Verify mount by checking routes
+        routes_after = [r.path for r in app.routes if hasattr(r, 'path')]
+        ui_routes = [r for r in routes_after if '/ui' in r]
+        print(f"✓ Verified: Found {len(ui_routes)} routes with /ui")
+        if ui_routes:
+            for r in ui_routes[:3]:
+                print(f"  - {r}")
         print("✓ FastAPI routes (/health, /api/*) are preserved")
     except Exception as e:
-        print(f"Warning: Failed to mount Gradio UI: {e}")
+        print(f"❌ ERROR: Failed to mount Gradio UI: {e}")
         import traceback
         traceback.print_exc()
+        print("⚠️  Server will continue without Gradio UI")
+else:
+    print("⚠️  WARNING: GRADIO_AVAILABLE is False, skipping Gradio UI mount")
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))

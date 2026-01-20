@@ -133,7 +133,8 @@ def run_inference(
 def create_ui():
     """Create the Gradio UI interface"""
     
-    with gr.Blocks(title="YuE Music Generation", theme=gr.themes.Soft()) as demo:
+    # Note: theme parameter moved to launch() in Gradio 6.0+
+    with gr.Blocks(title="YuE Music Generation") as demo:
         gr.Markdown("""
         # 🎵 YuE Music Generation UI
         **Open Music Foundation Models for Full-Song Generation**
@@ -156,8 +157,10 @@ def create_ui():
                 # Tag suggestions dropdown
                 if TOP_TAGS:
                     with gr.Accordion("常用标签 (Common Tags)", open=False):
+                        # Convert to list for Gradio 6.0+ compatibility
+                        tag_choices = list(TOP_TAGS[:50]) if isinstance(TOP_TAGS, (list, tuple)) else list(TOP_TAGS)[:50]
                         tag_dropdown = gr.Dropdown(
-                            choices=TOP_TAGS[:50],  # Show first 50 tags
+                            choices=tag_choices,  # Show first 50 tags
                             label="选择标签添加到输入框",
                             multiselect=True
                         )
@@ -420,6 +423,7 @@ if __name__ == "__main__":
     demo.launch(
         server_name=os.getenv("GRADIO_SERVER_NAME", "0.0.0.0"),
         server_port=int(os.getenv("GRADIO_SERVER_PORT", "7860")),
+        theme=gr.themes.Soft(),  # Theme moved here in Gradio 6.0+
         share=False
     )
 
