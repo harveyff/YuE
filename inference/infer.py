@@ -23,9 +23,8 @@ from mmtokenizer import _MMSentencePieceTokenizer
 # Patch AutoModel.from_pretrained to handle relative paths before importing SoundStream
 # This fixes the issue where xcodec_mini_infer uses relative paths like "./xcodec_mini_infer/..."
 _inference_dir = os.path.dirname(os.path.abspath(__file__))
-_original_from_pretrained = AutoModel.from_pretrained
+_original_from_pretrained = AutoModel.from_pretrained.__func__
 
-@classmethod
 def _patched_from_pretrained(cls, pretrained_model_name_or_path, *args, **kwargs):
     """Patch to convert relative paths to absolute paths"""
     if isinstance(pretrained_model_name_or_path, str) and not os.path.isabs(pretrained_model_name_or_path):
@@ -37,10 +36,11 @@ def _patched_from_pretrained(cls, pretrained_model_name_or_path, *args, **kwargs
                 pretrained_model_name_or_path = abs_path
                 # Add local_files_only=True to avoid HuggingFace Hub validation
                 kwargs['local_files_only'] = True
+    # Call the original unbound method with cls
     return _original_from_pretrained(cls, pretrained_model_name_or_path, *args, **kwargs)
 
-# Apply the patch
-AutoModel.from_pretrained = _patched_from_pretrained
+# Apply the patch - wrap it as a classmethod
+AutoModel.from_pretrained = classmethod(_patched_from_pretrained)
 
 from models.soundstream_hubert_new import SoundStream
 from vocoder import build_codec_model, process_audio
