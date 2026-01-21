@@ -96,10 +96,19 @@ if args.vocal_decoder_path and not os.path.isabs(args.vocal_decoder_path):
     args.vocal_decoder_path = os.path.join(_inference_dir, args.vocal_decoder_path.lstrip('./'))
 if args.inst_decoder_path and not os.path.isabs(args.inst_decoder_path):
     args.inst_decoder_path = os.path.join(_inference_dir, args.inst_decoder_path.lstrip('./'))
+# Check if flash-attn is available, fallback to default if not
+try:
+    import flash_attn
+    attn_implementation = "flash_attention_2"
+    print("✓ FlashAttention2 is available, using flash_attention_2")
+except ImportError:
+    attn_implementation = "sdpa"  # Use SDPA (scaled dot product attention) as fallback
+    print("⚠ FlashAttention2 not available, using sdpa (scaled dot product attention)")
+
 model = AutoModelForCausalLM.from_pretrained(
     stage1_model, 
-    torch_dtype=torch.bfloat16,
-    attn_implementation="flash_attention_2", # To enable flashattn, you have to install flash-attn
+    dtype=torch.bfloat16,  # Use dtype instead of deprecated torch_dtype
+    attn_implementation=attn_implementation,
     # device_map="auto",
     )
 # to device, if gpu is available

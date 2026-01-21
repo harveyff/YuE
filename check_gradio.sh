@@ -155,3 +155,4 @@ echo "Run this script inside the container to diagnose Gradio UI issues."
 echo "To run: bash /app/check_gradio.sh"
 
 
+

@@ -59,10 +59,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Note: This may take a while and requires CUDA toolkit
 # For RTX 50 series, ensure it's compiled with sm_120 support
 # MAX_JOBS limits parallel compilation to avoid OOM during build
-RUN TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;8.9;9.0;12.0" \
-    MAX_JOBS=4 \
-    pip install --no-cache-dir flash-attn --no-build-isolation || \
-    echo "FlashAttention installation failed, continuing..."
+# Try multiple installation methods for better compatibility
+RUN echo "Attempting to install FlashAttention..." && \
+    (TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;8.9;9.0;12.0" \
+     MAX_JOBS=2 \
+     pip install --no-cache-dir flash-attn --no-build-isolation 2>&1 | tee /tmp/flash_attn_install.log) || \
+    (echo "FlashAttention installation failed, trying with pre-built wheel..." && \
+     pip install --no-cache-dir flash-attn --no-build-isolation --no-deps 2>&1 | tee -a /tmp/flash_attn_install.log || \
+     echo "FlashAttention installation failed, continuing without it. Check /tmp/flash_attn_install.log for details.")
 
 # Copy project code
 COPY . .
