@@ -15,10 +15,33 @@ import torchaudio
 from torchaudio.transforms import Resample
 import soundfile as sf
 from einops import rearrange
-from transformers import AutoTokenizer, AutoModelForCausalLM, LogitsProcessor, LogitsProcessorList
+from transformers import AutoTokenizer, AutoModelForCausalLM, LogitsProcessor, LogitsProcessorList, AutoModel
 from omegaconf import OmegaConf
 from codecmanipulator import CodecManipulator
 from mmtokenizer import _MMSentencePieceTokenizer
+
+# Patch AutoModel.from_pretrained to handle relative paths before importing SoundStream
+# This fixes the issue where xcodec_mini_infer uses relative paths like "./xcodec_mini_infer/..."
+_inference_dir = os.path.dirname(os.path.abspath(__file__))
+_original_from_pretrained = AutoModel.from_pretrained
+
+@classmethod
+def _patched_from_pretrained(cls, pretrained_model_name_or_path, *args, **kwargs):
+    """Patch to convert relative paths to absolute paths"""
+    if isinstance(pretrained_model_name_or_path, str) and not os.path.isabs(pretrained_model_name_or_path):
+        # Check if it's a relative path (starts with ./ or ../)
+        if pretrained_model_name_or_path.startswith('./') or pretrained_model_name_or_path.startswith('../'):
+            # Convert to absolute path based on inference directory
+            abs_path = os.path.join(_inference_dir, pretrained_model_name_or_path.lstrip('./'))
+            if os.path.exists(abs_path):
+                pretrained_model_name_or_path = abs_path
+                # Add local_files_only=True to avoid HuggingFace Hub validation
+                kwargs['local_files_only'] = True
+    return _original_from_pretrained(cls, pretrained_model_name_or_path, *args, **kwargs)
+
+# Apply the patch
+AutoModel.from_pretrained = _patched_from_pretrained
+
 from models.soundstream_hubert_new import SoundStream
 from vocoder import build_codec_model, process_audio
 from post_process_audio import replace_low_freq_with_energy_matched
@@ -81,7 +104,7 @@ seed_everything(args.seed)
 # load tokenizer and model
 device = torch.device(f"cuda:{cuda_idx}" if torch.cuda.is_available() else "cpu")
 # Use absolute path based on script location to avoid working directory issues
-_inference_dir = os.path.dirname(os.path.abspath(__file__))
+# Note: _inference_dir is already defined above for the patch
 _tokenizer_path = os.path.join(_inference_dir, "mm_tokenizer_v0.2_hf", "tokenizer.model")
 mmtokenizer = _MMSentencePieceTokenizer(_tokenizer_path)
 
@@ -283,10 +306,11 @@ if not args.disable_offload_model:
     torch.cuda.empty_cache()
 
 print("Stage 2 inference...")
+# Use the same attention implementation as Stage 1 (already checked above)
 model_stage2 = AutoModelForCausalLM.from_pretrained(
     stage2_model, 
-    torch_dtype=torch.bfloat16,
-    attn_implementation="flash_attention_2",
+    dtype=torch.bfloat16,  # Use dtype instead of deprecated torch_dtype
+    attn_implementation=attn_implementation,  # Use the same implementation as Stage 1
     # device_map="auto",
     )
 model_stage2.to(device)
